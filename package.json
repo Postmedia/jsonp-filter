@@ -11,8 +11,8 @@
 	"licenses": [
 		{ "type": "MIT", "url": "https://github.com/Postmedia/connect-esi/blob/master/LICENSE"}
 	],
-	"keywords": ["coffeescript", "connect", "json", "jsonp"],
-	"repository": "git://github.com/Postmedia/connect-esi",
+	"keywords": ["coffeescript", "express", "json", "jsonp"],
+	"repository": "git://github.com/Postmedia/jsonp-filter",
 	"main": "./lib/jsonp-filter",
 	"scripts": {
 		"build": "cake build"
