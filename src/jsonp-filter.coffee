@@ -4,47 +4,28 @@ out = (require 'styout').instance 'jsonp-filter'
 out.verbosity = out.WARN_VERBOSITY
 
 exports.setupJSONP = ->
-	handleJSONP = (req, res, next) ->
+	checkJSON = (requrl) ->
+		uri = url.parse(requrl)
+		return /json=true/i.test(if uri.query? then uri.query else '')
 
-		checkJSON = ->
-			uri = url.parse(req.url)
-			re = /json=true/i
-			re.test(if uri.query? then uri.query else '')
+	return (req, res, next) ->
+		isJSON = checkJSON req.url
+		json = ''
 
-		isJSON = checkJSON()
-		exports.json = ''
-
-		# MODIFY res.writeHead
-		writeHead = res.writeHead # store the original function
-		res.writeHead = (statusCode, reasonPhrase, headers) -> # wrap write to hook into the exit path through the layers
-			res.writeHead = writeHead # put the original back
-			out.debug 'res.writeHead'
-			if !isJSON # call the original if not json
-				res.writeHead statusCode, reasonPhrase, headers
-
-		# MODIFY res.write to concatenate json
-		write = res.write
-		res.write = (chunk, encoding) ->
-			res.write = write
-			if isJSON
+		if isJSON
+			# res.write filter/hook to concatenate json
+			write = res.write
+			res.write = (chunk, encoding) ->
+				res.write = write
 				out.debug 'res.write json'
-				exports.json += chunk.toString()
-			else
-				out.debug 'res.write normal'
-				res.write chunk, encoding
+				json += chunk.toString(if encoding? then encoding else 'utf8')
 
-		# MODIFY res.end to use res.json if json exists
-		end = res.end
-		res.end = (data, encoding) ->
-			res.end = end
-			if isJSON
+			# res.end filter/hook
+			end = res.end
+			res.end = (data, encoding) ->
+				res.end = end
 				out.debug 'res.end json'
-				res.json exports.json
-			else if data?
-				out.debug 'res.end data'
-				res.end data, encoding
-			else
-				out.debug 'res.end nodata'
-				res.end()
+				res.removeHeader 'content-length' # content-length needs to be recalculated for stringify and callback padding
+				res.json json
 
 		next() # pass through to the next layer
